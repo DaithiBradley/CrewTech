@@ -3,6 +3,7 @@ package com.aap.medicore.Adapters;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,7 +46,8 @@ public class SectionTasksAdapter extends BaseAdapter implements StickyListHeader
         this.bitmapList = bitmapList;
         if (context != null)
             layoutInflater = LayoutInflater.from(context);
-        simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
+        //simpleDateFormat = new SimpleDateFormat("dd-MM-yyyy");
+        simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
 
     }
 
@@ -70,26 +72,30 @@ public class SectionTasksAdapter extends BaseAdapter implements StickyListHeader
             e.printStackTrace();
         }
         Date jobDate = assignedIncidencesModels.get(position).getObjDate();
-        switch (currentDate.compareTo(jobDate)) {
-
-            case 0:
-                headerText = "Today's Calls";
-                break;
-            case 1:
-                if (getDifferenceInDates(currentDate, jobDate) == 1)
-                    headerText = "Yesterday's Calls";
-                else
-                    headerText = "Past Calls";
-                break;
-            case -1:
-                if (getDifferenceInDates(jobDate, currentDate) == 1)
-                    headerText = "Tomorrow's Calls";
-                else
-                    headerText = "Future Calls";
-                break;
-
+        if (jobDate != null) {
+            switch (currentDate.compareTo(jobDate)) {
+                case 0:
+                    headerText = "Today's Calls";
+                    break;
+                case 1:
+                    if (getDifferenceInDates(currentDate, jobDate) == 1)
+                        headerText = "Yesterday's Calls";
+                    else
+                        headerText = "Past Calls";
+                    break;
+                case -1:
+                    if (getDifferenceInDates(jobDate, currentDate) == 1)
+                        headerText = "Tomorrow's Calls";
+                    else
+                        headerText = "Future Calls";
+                    break;
+            }
+            holder.text.setText(headerText);
         }
-        holder.text.setText(headerText);
+        else
+        {
+            Log.d("SectionTasksAdapter","Job date wrong format");
+        }
         return convertView;
     }
 

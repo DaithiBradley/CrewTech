@@ -12,7 +12,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -48,7 +47,6 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.HorizontalScrollView;
@@ -57,19 +55,18 @@ import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
+import androidx.appcompat.widget.AppCompatButton;
 import androidx.appcompat.widget.AppCompatSpinner;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
-import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -88,14 +85,15 @@ import com.aap.medicore.NetworkCalls.RetrofitClass;
 import com.aap.medicore.R;
 import com.aap.medicore.Utils.Constants;
 import com.aap.medicore.Utils.CustomButton;
-import com.aap.medicore.Utils.CustomEditText;
 import com.aap.medicore.Utils.CustomTextView;
 import com.aap.medicore.Utils.GPSTracker;
 import com.aap.medicore.Utils.SessionTimeoutDialog;
 import com.aap.medicore.Utils.SettingValues;
 import com.aap.medicore.Utils.TinyDB;
 import com.bumptech.glide.Glide;
+import com.fxn.pix.Options;
 import com.fxn.pix.Pix;
+import com.fxn.utility.PermUtil;
 import com.github.gcacace.signaturepad.views.SignaturePad;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -497,6 +495,21 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case PermUtil.REQUEST_CODE_ASK_MULTIPLE_PERMISSIONS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Pix.start(this, Options.init().setRequestCode(REQUEST_GALLERY_PERMISSION));
+                } else {
+                    Toast.makeText(this, "Approve permissions to open Pix ImagePicker", Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
+        }
+    }
+
     public String compressImage(String imageUri) {
 
         String filePath = getRealPathFromURI(imageUri);
@@ -721,9 +734,17 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
             Log.e("TAG", p2);
             requestPermission(p2);
         } else {
-            Pix.start(EquipmentCheckList.this,                    //Activity or Fragment Instance
+
+            Options options = Options.init()
+                    .setRequestCode(REQUEST_GALLERY_PERMISSION)                                           //Request code for activity results
+                    .setCount(30 - myImages.size())                                                   //Number of images to restict selection count
+                    .setFrontfacing(false)                                         //Front Facing camera on start
+                    .setExcludeVideos(false);                                 //Option to exclude videos
+
+            Pix.start(this, options);
+          /*  Pix.start(EquipmentCheckList.this,                    //Activity or Fragment Instance
                     REQUEST_GALLERY_PERMISSION,                //Request code for activity results
-                    30 - myImages.size());
+                    30 - myImages.size());*/
 //            Toast.makeText(CreateJob.this, "All permission granted", Toast.LENGTH_LONG).getDialog();
         }
 
@@ -791,11 +812,11 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
     public void logoutConfirmDialogBox() {
         final Dialog dialog = new Dialog(this);
         dialog.setCanceledOnTouchOutside(false);
-        final Button btnNo, btnYes;
+        final AppCompatButton btnNo, btnYes;
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.timer);
-        btnYes = (Button) dialog.findViewById(R.id.btnYes);
-        btnNo = (Button) dialog.findViewById(R.id.btnNo);
+        btnYes = (AppCompatButton) dialog.findViewById(R.id.btnYes);
+        btnNo = (AppCompatButton) dialog.findViewById(R.id.btnNo);
         btnNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1302,7 +1323,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
 
                     relativeParams = new RelativeLayout.LayoutParams(convertToDp(10, this), convertToDp(10, this));
                     relativeParams.addRule(RelativeLayout.ALIGN_PARENT_END);
-                ivMandatory.setLayoutParams(relativeParams);
+                    ivMandatory.setLayoutParams(relativeParams);
 
                     relativeParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, convertToDp(2, this));
                     relativeParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
@@ -2901,7 +2922,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
 
                     relativeParams = new RelativeLayout.LayoutParams(convertToDp(10, this), convertToDp(10, this));
                     relativeParams.addRule(RelativeLayout.ALIGN_PARENT_END);
-                                       ivMandatory.setLayoutParams(relativeParams);
+                    ivMandatory.setLayoutParams(relativeParams);
 
                     relativeParams = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, convertToDp(2, this));
                     relativeParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
@@ -2929,7 +2950,8 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                             myCalendar.set(Calendar.MONTH, monthOfYear);
                             myCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth);
 
-                            String myFormat = " MM - dd - yyyy"; //In which you need put here
+                           // String myFormat = " MM - dd - yyyy"; //In which you need put here
+                            String myFormat = "dd/MM/yyyy"; //In which you need put here
                             SimpleDateFormat sdf = new SimpleDateFormat(myFormat, Locale.US);
 
                             textView.setText(" " + sdf.format(myCalendar.getTime()));
@@ -3114,6 +3136,13 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                         }
                     });
 
+                    String path=fields.get(position).getValue();
+                    if(path!=null&&!path.isEmpty())
+                    {
+                        etText.setTag(path);
+                        iv.setVisibility(View.VISIBLE);
+                        Glide.with(context).load(path).into(iv);
+                    }
 
 //                iv.setVisibility(View.GONE);
 
@@ -3167,7 +3196,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                     Log.e("curenttime", "scccccccccc" + datetime);
                     end_time = datetime;
                     getDataFromDynamicViews(formModel);
-                    if (isMandatoryFilled) {
+                    if (isMandatoryFilled && obj != null) {
                         submitData(obj.toString());
                     } else {
                         Toast.makeText(EquipmentCheckList.this, "Please fill all the mandatory fields", Toast.LENGTH_SHORT).show();
@@ -3347,6 +3376,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
 //                }
             }
         });
+
         dialog.show();
 
 
@@ -3378,7 +3408,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
 
     public File getAlbumStorageDir(String albumName) {
         // Get the directory for the user's public pictures directory.
-        File file = new File(Environment.getExternalStoragePublicDirectory(
+        File file = new File(getExternalFilesDir(
                 Environment.DIRECTORY_PICTURES), albumName);
         if (!file.mkdirs()) {
             Log.e("SignaturePad", "Directory not created");
@@ -4172,11 +4202,12 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                             fieldsObj.put("field_id", field_id);
                             saveFieldsObj.put("id", field_id);
                             fieldsObj.put("input_type", "signature");
-                            saveFieldsObj.put("input_type", "signature");
+                           // saveFieldsObj.put("input_type", "signature");
+                            saveFieldsObj.put("input_type", "text");
                             fieldsObj.put("value", encodedImage);
-                            saveFieldsObj.put("value", encodedImage);
+                           // saveFieldsObj.put("value", encodedImage);
+                            saveFieldsObj.put("value", text);
                             if (!text.equalsIgnoreCase("")) {
-
                             } else {
                                 isMandatoryFilled = false;
 
@@ -4197,7 +4228,28 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                         } catch (NullPointerException e) {
                             e.printStackTrace();
                             isMandatoryFilled = false;
+                            String field_id;
+                            CustomTextView textView = (CustomTextView) allViewInstance.get(noOfViews);
+                            field_id = fields.get(noOfViews).getFieldId() + "";
 
+                            fieldsObj.put("field_id", field_id);
+                            saveFieldsObj.put("id", field_id);
+                            fieldsObj.put("input_type", "signature");
+                            // saveFieldsObj.put("input_type", "signature");
+                            saveFieldsObj.put("input_type", "text");
+                            fieldsObj.put("value", "");
+                            saveFieldsObj.put("value", "");
+
+                            JSONArray optionsArray = new JSONArray();
+                            fieldsObj.put("formOptions", optionsArray);
+                            jsonArray.put(fieldsObj);
+                            saveFieldsObj.put("formOptions", optionsArray);
+                            saveFieldsObj.put("label", saveField.getLabel());
+                            saveFieldsObj.put("name", saveField.getName());
+                            saveFieldsObj.put("placeholder", saveField.getPlaceholder());
+                            saveFieldsObj.put("required", saveField.getRequired());
+                            saveFieldsObj.put("barcode", saveField.isBarcode());
+                            saveFieldsJsonArray.put(saveFieldsObj);
                         }
                     } else {
                         try {
@@ -4219,9 +4271,11 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                             fieldsObj.put("field_id", field_id);
                             saveFieldsObj.put("id", field_id);
                             fieldsObj.put("input_type", "signature");
-                            saveFieldsObj.put("input_type", "signature");
+                           // saveFieldsObj.put("input_type", "signature");
+                            saveFieldsObj.put("input_type", "text");
                             fieldsObj.put("value", encodedImage);
-                            saveFieldsObj.put("value", encodedImage);
+                            //saveFieldsObj.put("value", encodedImage);
+                            saveFieldsObj.put("value", text);
 
 
                             JSONArray optionsArray = new JSONArray();
@@ -4246,7 +4300,8 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
                             fieldsObj.put("field_id", field_id);
                             saveFieldsObj.put("id", field_id);
                             fieldsObj.put("input_type", "signature");
-                            saveFieldsObj.put("input_type", "signature");
+                           // saveFieldsObj.put("input_type", "signature");
+                            saveFieldsObj.put("input_type", "text");
                             fieldsObj.put("value", "");
                             saveFieldsObj.put("value", "");
 
@@ -4436,6 +4491,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
         textView.setText(s);
         field2checkList.put(hashMap5.get(recyclerViewId), list);
     }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
@@ -4443,8 +4499,8 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
             if (view instanceof EditText) {
                 Rect r = new Rect();
                 view.getGlobalVisibleRect(r);
-                int rawX = (int)ev.getRawX();
-                int rawY = (int)ev.getRawY();
+                int rawX = (int) ev.getRawX();
+                int rawY = (int) ev.getRawY();
                 if (!r.contains(rawX, rawY)) {
                     view.clearFocus();
                     hideHeyboard();
@@ -4453,6 +4509,7 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
         }
         return super.dispatchTouchEvent(ev);
     }
+
     public static class Arrows {
 
         int leftArrow;
@@ -4484,3 +4541,4 @@ public class EquipmentCheckList extends BaseActivity implements EquipmentAccesso
         }
     }
 }
+

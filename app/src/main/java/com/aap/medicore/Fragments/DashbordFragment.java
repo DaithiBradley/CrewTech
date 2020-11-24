@@ -16,12 +16,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.widget.AppCompatButton;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -41,11 +41,10 @@ import com.aap.medicore.NetworkCalls.RetrofitClass;
 import com.aap.medicore.R;
 import com.aap.medicore.Utils.CircularTextView;
 import com.aap.medicore.Utils.Constants;
-import com.aap.medicore.Utils.CustomButton;
-import com.aap.medicore.Utils.CustomTextView;
 import com.aap.medicore.Utils.DateComparator;
 import com.aap.medicore.Utils.SessionTimeoutDialog;
 import com.aap.medicore.Utils.TinyDB;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
@@ -289,6 +288,8 @@ public class DashbordFragment extends BaseFragment {
 //            rvVisits.setVisibility(View.GONE);
 //            tvNoCalls.setVisibility(View.VISIBLE);
 //        }
+//        Snackbar.make(requireActivity().findViewById(android.R.id.content),
+//                "Hit Task perform", Snackbar.LENGTH_LONG).show();
         retrofit2.Call<TasksListResponse> call;
 
         call = RetrofitClass.getInstance().getWebRequestsInstance().hitTasksList(tinyDB.getString(Constants.token), tinyDB.getString(Constants.user_id));
@@ -623,11 +624,11 @@ public class DashbordFragment extends BaseFragment {
 
     public void logoutConfirmDialogBox() {
         final Dialog dialog = new Dialog(getActivity());
-        final Button btnNo, btnYes;
+        final AppCompatButton btnNo, btnYes;
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.dialog_logout);
-        btnYes = (Button) dialog.findViewById(R.id.btnYes);
-        btnNo = (Button) dialog.findViewById(R.id.btnNo);
+        btnYes =  dialog.findViewById(R.id.btnYes);
+        btnNo =  dialog.findViewById(R.id.btnNo);
         btnNo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -826,8 +827,10 @@ public class DashbordFragment extends BaseFragment {
 //        }, delay);
 
 
-        getActivity().registerReceiver(broadcastReceiver, new IntentFilter(
+        getActivity().registerReceiver(broadcastActionBroadcastReceiver, new IntentFilter(
                 Constants.BROADCAST_ACTION));
+        getActivity().registerReceiver(notificationEventBroadcastReceiver, new IntentFilter(
+                Constants.NOTIFICATION_MESSAGE_EVENT));
 
         if (!(tinyDB.getString(Constants.StateTitle).isEmpty())) {
             tvState.setText(tinyDB.getString(Constants.StateTitle));
@@ -845,10 +848,11 @@ public class DashbordFragment extends BaseFragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        getActivity().unregisterReceiver(broadcastReceiver);
+        getActivity().unregisterReceiver(broadcastActionBroadcastReceiver);
+        getActivity().unregisterReceiver(notificationEventBroadcastReceiver);
     }
 
-    private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver broadcastActionBroadcastReceiver = new BroadcastReceiver() {
         Boolean status = false;
 
         @Override
@@ -866,6 +870,13 @@ public class DashbordFragment extends BaseFragment {
             }
             Log.e("Status", intent.getBooleanExtra(Constants.Status, false) + "");
 
+        }
+    };
+
+    private BroadcastReceiver notificationEventBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            hitTasksList();
         }
     };
 }

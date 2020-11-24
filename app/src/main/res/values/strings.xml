@@ -17,10 +17,8 @@
     <string name="save_signature">Save Signature</string>
     <string name="resendCode"><u>"Tap here to change numbers or try again"</u></string>
     <string name="channel_name">Notification Channel</string>
-
-
-
-
+    <string name="group_channel_name">Group Notification Channel</string>
+    <string name="inbox">Inbox</string>
 
 
 </resources>

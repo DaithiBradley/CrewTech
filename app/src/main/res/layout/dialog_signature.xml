@@ -2,9 +2,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:signature="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="300dp"
+    android:layout_width="match_parent"
     android:layout_height="500dp"
-
     tools:context=".Activities.SignatureActivity">
 
     <LinearLayout
@@ -13,7 +12,6 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
-
 
         <RelativeLayout
             android:id="@+id/rlHeading"
@@ -27,7 +25,6 @@
                 android:layout_height="wrap_content"
                 android:gravity="left"
                 android:orientation="vertical">
-
 
                 <com.aap.medicore.Utils.CustomTextView
                     android:id="@+id/heading"
@@ -98,7 +95,7 @@
             android:orientation="horizontal"
             android:paddingTop="16dp">
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/clear_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -107,7 +104,7 @@
                 android:text="@string/clear_pad"
                 android:textSize="14dp" />
 
-            <Button
+            <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/save_button"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

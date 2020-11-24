@@ -13,7 +13,7 @@ import androidx.fragment.app.Fragment;
 
 import com.aap.medicore.R;
 
-public class BaseFragment extends Fragment {
+public class BaseFragment extends Fragment implements OnBackPressed{
 
 
     public long mLastClickTime = 0;
@@ -81,4 +81,8 @@ public class BaseFragment extends Fragment {
         return dialog;
     }
 
+    @Override
+    public void onBackPressed() {
+
+    }
 }

@@ -1,4 +1,0 @@
-# Referenced at C:\Users\AJ\AndroidStudioProjects\CrewTech-Android\app\build\intermediates\merged_manifests\release\AndroidManifest.xml:33
--keep class androidx.core.app.CoreComponentFactory { <init>(); }
-# Referenced at C:\Users\AJ\AndroidStudioProjects\CrewTech-Android\app\build\intermediates\merged_manifests\release\AndroidManifest.xml:33
--keep class com.aap.medicore.BaseClasses.BaseApplication { <init>(); }

@@ -40,7 +40,8 @@ public class SortingModelAdapter extends RecyclerView.Adapter<SortingModelAdapte
     @Override
     public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
         SortingModel model = sortingModelList.get(position);
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+       // SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd/MM/yyyy");
         holder.tvDate.setText(simpleDateFormat.format(model.getDate()));
         AdapterTasksList adapterTasksList = new AdapterTasksList(model.getAssignedIncidencesModels(),context,bitmapList);
         LinearLayoutManager manager = new LinearLayoutManager(context);

@@ -20,16 +20,27 @@ import androidx.fragment.app.Fragment;
 import com.aap.medicore.R;
 import com.aap.medicore.Utils.CustomTextView;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 
 public class BaseActivity extends AppCompatActivity {
+
+    protected List<OnBackPressed> onBackPressedList;
     public long mLastClickTime = 0;
+
+    public void addOnBackPressed(OnBackPressed listener) {
+        if (listener != null) {
+            if (onBackPressedList == null)
+                onBackPressedList = new CopyOnWriteArrayList<>();
+            onBackPressedList.add(listener);
+        }
+    }
 
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
     }
 
     public void addFragmentWithBackstack(int containerId, Fragment fragment, String tag) {
@@ -54,16 +65,6 @@ public class BaseActivity extends AppCompatActivity {
                 .replace(containerId, fragment, tag).commit();
     }
 
-    //    public Boolean isConnected() {
-//        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-//        if (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED ||
-//                connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED) {
-//            //we are connected to a network
-//            return true;
-//        } else {
-//            return false;
-//        }
-//    }
     public boolean isConnected(Context context) {
         ConnectivityManager
                 cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -96,6 +97,13 @@ public class BaseActivity extends AppCompatActivity {
             view = new View(activity);
         }
         boolean b = imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
-        Log.d("log", "hideKeyboard: "+b);
+        Log.d("log", "hideKeyboard: " + b);
+    }
+
+    protected void notifyOnBackPressed() {
+        for (OnBackPressed item : onBackPressedList) {
+            if (item != null)
+                item.onBackPressed();
+        }
     }
 }

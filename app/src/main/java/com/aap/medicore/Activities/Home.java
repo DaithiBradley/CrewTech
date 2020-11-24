@@ -14,7 +14,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
@@ -29,14 +28,18 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.aap.medicore.Adapters.MainPagerAdapter;
 import com.aap.medicore.BaseClasses.BaseActivity;
+import com.aap.medicore.DatabaseHandler.DatabaseHandler;
 import com.aap.medicore.Fragments.CheckListFragment;
 import com.aap.medicore.Fragments.DashbordFragment;
+import com.aap.medicore.Fragments.InboxFragment;
 import com.aap.medicore.Fragments.PendingUploadsFragment;
 import com.aap.medicore.Fragments.Staticpages;
+import com.aap.medicore.Models.InboxMessage;
 import com.aap.medicore.Models.StatusResponse;
 import com.aap.medicore.NetworkCalls.RetrofitClass;
 import com.aap.medicore.R;
 import com.aap.medicore.Utils.Constants;
+import com.aap.medicore.Utils.InboxMessageRepo;
 import com.aap.medicore.Utils.SessionTimeoutDialog;
 import com.aap.medicore.Utils.TinyDB;
 import com.aap.medicore.Utils.UploaderService;
@@ -47,6 +50,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationItemView;
 import com.google.android.material.bottomnavigation.BottomNavigationMenuView;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -62,7 +66,7 @@ import retrofit2.Response;
 import static com.aap.medicore.Utils.UIUtils.convertToDp;
 
 
-public class Home extends BaseActivity implements CheckListFragment.OnFragmentInteractionListener, DashbordFragment.OnFragmentInteractionListener, PendingUploadsFragment.OnFragmentInteractionListener, Staticpages.OnFragmentInteractionListener{
+public class Home extends BaseActivity implements CheckListFragment.OnFragmentInteractionListener, DashbordFragment.OnFragmentInteractionListener, PendingUploadsFragment.OnFragmentInteractionListener, Staticpages.OnFragmentInteractionListener {
     myPager pager;
 
     Intent newintent;
@@ -92,7 +96,7 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (!intent.getBooleanExtra(Constants.pendingStatus,false)){
+            if (!intent.getBooleanExtra(Constants.pendingStatus, false)) {
                 lottieAnimationView.setVisibility(View.GONE);
             }
         }
@@ -101,13 +105,14 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
     BroadcastReceiver networkReceiver;
     Handler h = new Handler();
     int delay = 2 * 1000; //1 second=1000 milisecond, 15*1000=15seconds
-    Runnable runnable;
+    private InboxMessageRepo inboxMessageRepo;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
 
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            checkForNewMessages();
             switch (item.getItemId()) {
                 case R.id.navigation_check_list:
                     setStatusItem();
@@ -119,6 +124,7 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
                     else
                         setStatusItem();
                     pager.setCurrentItem(1, false);
+                    new Handler().postDelayed(()->showCallBadge(false),2000);
                     return true;
 
                 case R.id.navigation_patient_information:
@@ -138,6 +144,10 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
                     setStatusItem();
                     pager.setCurrentItem(3, false);
                     return true;
+                case R.id.inbox_fragment:
+                    setStatusItem();
+                    pager.setCurrentItem(4, false);
+                    return true;
 
             }
             return false;
@@ -145,17 +155,15 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
     };
 
 
-
     private void setStatusItem() {
         if (bottomNavigationView != null) {
             BottomNavigationMenuView menuView = (BottomNavigationMenuView) bottomNavigationView.getChildAt(0);
-             itemView = (BottomNavigationItemView) menuView.getChildAt(2);
+            itemView = (BottomNavigationItemView) menuView.getChildAt(2);
             ImageView imageView5 = itemView.findViewById(R.id.imageView5);
             imageView5.setBackground(getResources().getDrawable(R.drawable.ic_progress));
             ConstraintLayout.LayoutParams layoutParams = (ConstraintLayout.LayoutParams) imageView5.getLayoutParams();
             layoutParams.setMargins(0, 0, 0, convertToDp(16, this));
             imageView5.setLayoutParams(layoutParams);
-
         }
     }
 
@@ -174,7 +182,7 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
             public void onReceive(Context context, Intent intent) {
                 if (!isConnected(context))
                     ltNoNetwork.setVisibility(View.VISIBLE);
-                else{
+                else {
                     ltNoNetwork.setVisibility(View.GONE);
                 }
                 newintent = new Intent(Constants.BROADCAST_ACTION);
@@ -182,8 +190,8 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
                 sendBroadcast(newintent);
             }
         };
-        registerReceiver(networkReceiver,new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
-        registerReceiver(broadcastReceiver,new IntentFilter(UploaderService.BROADCAST_ACTION));
+        registerReceiver(networkReceiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        registerReceiver(broadcastReceiver, new IntentFilter(UploaderService.BROADCAST_ACTION));
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -260,10 +268,10 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
 
     }
 
-    private void hitUserStatus(){
+    private void hitUserStatus() {
         retrofit2.Call<StatusResponse> call;
 
-        call = RetrofitClass.getInstance().getWebRequestsInstance().hitUserStatus(tinyDB.getString(Constants.token), tinyDB.getString(Constants.user_id), state,"online");
+        call = RetrofitClass.getInstance().getWebRequestsInstance().hitUserStatus(tinyDB.getString(Constants.token), tinyDB.getString(Constants.user_id), state, "online");
 
         call.enqueue(new Callback<StatusResponse>() {
             @Override
@@ -293,12 +301,12 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
             }
         });
     }
+
     @Override
     public void onBackPressed() {
-//        super.onBackPressed();
-//        Intent i = new Intent(Home.this,Home.class);
-//        startActivity(i);
+        notifyOnBackPressed();
     }
+
     private void sendTokenToServer(String AuthToken, String tokenFCM) {
         try {
             Call<ResponseBody> call = RetrofitClass.getInstance().getWebRequestsInstance().sendFCMTokenToServer(AuthToken, tokenFCM, "ANDROID");
@@ -318,6 +326,7 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
             e.printStackTrace();
         }
     }
+
     private BroadcastReceiver mConnReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             boolean noConnectivity = intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false);
@@ -366,20 +375,27 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
     @Override
     protected void onResume() {
 
-
         if (bottomNavigationView != null) {
-                 lottieAnimationView = itemView.findViewById(R.id.lottie);
+            lottieAnimationView = itemView.findViewById(R.id.lottie);
+            checkForNewMessages();
             if (tinyDB.getBoolean(Constants.pendingStatus)) {
                 lottieAnimationView.setVisibility(View.VISIBLE);
 
             } else {
                 lottieAnimationView.setVisibility(View.GONE);
             }
+
+            if (tinyDB.getBoolean(Constants.OPEN_INBOX_MESSAGE_ACTION)) {
+                pager.setCurrentItem(4, false);
+                bottomNavigationView.setSelectedItemId(R.id.inbox_fragment);
+            }
         }
         //start handler as activity become visible
         merlin.bind();
         this.registerReceiver(this.mConnReceiver,
                 new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        this.registerReceiver(messageIntentReceiver, new IntentFilter(Constants.INBOX_MESSAGE_EVENT));
+        this.registerReceiver(callNotificationIntentReceiver, new IntentFilter(Constants.NOTIFICATION_MESSAGE_EVENT));
         if (!(tinyDB.getString(Constants.StateTitle).isEmpty())) {
             state = tinyDB.getString(Constants.StateTitle);
         }
@@ -426,16 +442,30 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
     protected void onPause() {
 //        h.removeCallbacks(runnable); //stop handler when activity not visible
         merlin.unbind();
-        this.unregisterReceiver(this.mConnReceiver);
-        super.onPause();
+        try {
+            unregisterReceiver(this.mConnReceiver);
+            unregisterReceiver(this.messageIntentReceiver);
+            unregisterReceiver(this.callNotificationIntentReceiver);
+            super.onPause();
+        } catch(IllegalArgumentException e) {
+            super.onPause();
+            Log.e(TAG,"OnPause receivers unregister fail");
+        }
+
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(broadcastReceiver);
-        unregisterReceiver(networkReceiver);
-
+        try {
+            unregisterReceiver(broadcastReceiver);
+            unregisterReceiver(networkReceiver);
+            unregisterReceiver(this.mConnReceiver);
+            unregisterReceiver(this.messageIntentReceiver);
+            unregisterReceiver(this.callNotificationIntentReceiver);
+        } catch(IllegalArgumentException e) {
+            Log.e(TAG,"OnDestroy receivers unregister fail");
+        }
     }
 
     private void init() {
@@ -444,10 +474,12 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
         merlin = new Merlin.Builder().withConnectableCallbacks().build(Home.this);
         this.registerReceiver(this.mConnReceiver,
                 new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        inboxMessageRepo = InboxMessageRepo.getInstance(this);
         pager = findViewById(R.id.pager);
         setUpPager();
         pager.setCurrentItem(1, false);
         bottomNavigationView.setSelectedItemId(R.id.navigation_dashboard);
+
     }
 
     private void clickListeners() {
@@ -474,6 +506,9 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
                 if (position == 3) {
                     bottomNavigationView.setSelectedItemId(R.id.Staticpages);
                 }
+                if (position == 4) {
+                    bottomNavigationView.setSelectedItemId(R.id.inbox_fragment);
+                }
 
             }
 
@@ -491,18 +526,65 @@ public class Home extends BaseActivity implements CheckListFragment.OnFragmentIn
 //        pager.setPagingEnabled(false);
         pagerAdapter = new MainPagerAdapter(getSupportFragmentManager());
 
+        InboxFragment inboxFragment = new InboxFragment();
+        Home.this.addOnBackPressed(inboxFragment);
         pagerAdapter.addFragment(new CheckListFragment(), "CheckListFragment");
         pagerAdapter.addFragment(new DashbordFragment(), "DashbordFragment");
         pagerAdapter.addFragment(new PendingUploadsFragment(), "PendingUploadsFragment");
         pagerAdapter.addFragment(new Staticpages(), "Static Pages");
+        pagerAdapter.addFragment(inboxFragment, "InboxFragment");
         pager.setAdapter(pagerAdapter);
-        pager.setOffscreenPageLimit(4);
+        pager.setOffscreenPageLimit(5);
+
     }
+
 
     @Override
     public void onFragmentInteraction(Uri uri) {
 
     }
 
+    public void checkForNewMessages() {
+        int hasNew = inboxMessageRepo.getUnreadMessagesCount();
+        showInboxBadge(hasNew > 0);
+        inboxMessageRepo.checkAndRemoveExpired();
+    }
+
+    public void showInboxBadge(boolean show) {
+        BadgeDrawable inboxBadge = bottomNavigationView.getOrCreateBadge(R.id.inbox_fragment);
+        inboxBadge.setVerticalOffset(12);
+        inboxBadge.setHorizontalOffset(6);
+        inboxBadge.setVisible(show);
+    }
+
+    public void showCallBadge(boolean show) {
+        BadgeDrawable inboxBadge = bottomNavigationView.getOrCreateBadge(R.id.navigation_dashboard);
+        inboxBadge.setVerticalOffset(12);
+        inboxBadge.setHorizontalOffset(6);
+        inboxBadge.setVisible(show);
+    }
+
+    private BroadcastReceiver messageIntentReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && intent.getAction().equalsIgnoreCase(Constants.INBOX_MESSAGE_EVENT)) {
+                checkForNewMessages();
+            }
+        }
+    };
+
+    private BroadcastReceiver callNotificationIntentReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && intent.getAction().equalsIgnoreCase(Constants.NOTIFICATION_MESSAGE_EVENT)) {
+                showCallBadge(true);
+                if (bottomNavigationView.getSelectedItemId() == R.id.navigation_dashboard) {
+                    new Handler().postDelayed(() ->
+                                    showCallBadge(false)
+                            , 2000);
+                }
+            }
+        }
+    };
 
 }

@@ -11,11 +11,15 @@ import android.util.Log;
 import com.aap.medicore.Models.AssignedIncidencesModel;
 import com.aap.medicore.Models.DBAdminFormModel;
 import com.aap.medicore.Models.DBImagesModel;
+import com.aap.medicore.Models.InboxMessage;
 import com.aap.medicore.Models.QueueModel;
 import com.aap.medicore.Models.SelectImagesModel;
 import com.aap.medicore.Models.TabsModel;
 
 import java.io.File;
+import java.sql.Date;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +31,7 @@ import java.util.List;
 public class DatabaseHandler extends SQLiteOpenHelper {
 
     // Database Version
-    private static final int DATABASE_VERSION = 11;
+    private static final int DATABASE_VERSION = 12;
 
     // Database Name
     private static final String DATABASE_NAME = "Medicore";
@@ -103,6 +107,18 @@ public class DatabaseHandler extends SQLiteOpenHelper {
     public static final String KEY_ADMIN_FORM_IMAGES = "admin_form_image";
     public static final String KEY_ADMIN_FORM_TIMEOUT = "admin_form_timeout";
 
+    //table name
+    public static final String TABLE_INBOX_MESSAGES = "table_inbox_messages";
+
+    //coloumn
+    public static final String KEY_MESSAGE_ID = "message_id";
+    public static final String KEY_USERNAME = "username";
+    public static final String KEY_MESSAGE_TITLE = "message_title";
+    public static final String KEY_MESSAGE_CONTENT = "message_content";
+    public static final String KEY_SENT_TIME = "sent_time";
+    public static final String KEY_OPEN_TIME = "open_time";
+    public static final String KEY_IS_OPENED = "is_opened";
+
     public DatabaseHandler(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
@@ -175,6 +191,17 @@ public class DatabaseHandler extends SQLiteOpenHelper {
                 + KEY_ADMIN_FORM_TIMEOUT + " TEXT"
                 + ")";
 
+        String CREATE_TABLE_MESSAGES = "CREATE TABLE IF NOT EXISTS "
+                + TABLE_INBOX_MESSAGES
+                + "(" + KEY_MESSAGE_ID + " TEXT PRIMARY KEY, "
+                + KEY_USERNAME + " TEXT,"
+                + KEY_MESSAGE_TITLE + " TEXT,"
+                + KEY_MESSAGE_CONTENT + " TEXT,"
+                + KEY_SENT_TIME + " INTEGER,"
+                + KEY_OPEN_TIME + " INTEGER,"
+                + KEY_IS_OPENED + " INTEGER"
+                + ")";
+
         Log.e("Tag IncidencesTable", CREATE_TABLE_ASSIGNED_INCIDENCES);
         sqLiteDatabase.execSQL(CREATE_TABLE_ASSIGNED_INCIDENCES);
 
@@ -190,6 +217,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         sqLiteDatabase.execSQL(CREATE_TABLE_TABS);
         sqLiteDatabase.execSQL(CREATE_TABLE_TABS_IMAGES);
         sqLiteDatabase.execSQL(CREATE_TABLE_ADMIN_FORMS);
+        sqLiteDatabase.execSQL(CREATE_TABLE_MESSAGES);
     }
 
     @Override
@@ -201,10 +229,149 @@ public class DatabaseHandler extends SQLiteOpenHelper {
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABS_TABLE);
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_TABS_IMAGES);
         sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_ADMIN_FORMS);
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + TABLE_INBOX_MESSAGES);
 
         // create new tables
         onCreate(sqLiteDatabase);
     }
+
+     public void insertMessage(InboxMessage message) {
+        SQLiteDatabase database = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KEY_MESSAGE_ID, message.id);
+        contentValues.put(KEY_USERNAME, message.username);
+        contentValues.put(KEY_MESSAGE_TITLE, message.title);
+        contentValues.put(KEY_MESSAGE_CONTENT, message.content);
+        contentValues.put(KEY_SENT_TIME, message.sentTime);
+        contentValues.put(KEY_OPEN_TIME, message.openTime);
+        contentValues.put(KEY_IS_OPENED, message.isOpened ? 1 : 0);
+        try {
+            database.insertOrThrow(TABLE_INBOX_MESSAGES, null, contentValues);
+            Log.d("MESSAGES_TEST","MessageInserted");
+        } catch (Exception e) {
+            Log.d("MESSAGES_TEST","MessageInsertFail");
+            e.printStackTrace();
+        }
+        database.close();
+    }
+
+    public void removeMessage(String id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("delete from " + TABLE_INBOX_MESSAGES + " WHERE "
+                + KEY_MESSAGE_ID + " = \"" + id+"\"");
+        db.close();
+    }
+
+    public void updateMessage(InboxMessage message) {
+        SQLiteDatabase database = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KEY_OPEN_TIME, message.openTime);
+        contentValues.put(KEY_IS_OPENED, message.isOpened ? 1 : 0);
+        int i = database.update(TABLE_INBOX_MESSAGES, contentValues, "message_id = ?", new String[]{message.id});
+        database.close();
+    }
+
+    public ArrayList<InboxMessage> getInboxMessagesForUser(String username) {
+        ArrayList<InboxMessage> list = new ArrayList<InboxMessage>();
+        String selectQuery = "select * from " + TABLE_INBOX_MESSAGES + " WHERE " + KEY_USERNAME + "='" + username + "'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        if (cursor.moveToFirst()) {
+            do {
+                InboxMessage model = new InboxMessage();
+                model.id = cursor.getString(0);
+                model.username = cursor.getString(1);
+                model.title = cursor.getString(2);
+                model.content = cursor.getString(3);
+                model.sentTime = cursor.getLong(4);
+                model.openTime = cursor.getLong(5);
+                model.isOpened = cursor.getInt(6) == 1;
+                list.add(model);
+            } while (cursor.moveToNext());
+        }
+        return list;
+    }
+
+    public InboxMessage getInboxMessage(String id) {
+        ArrayList<InboxMessage> list = new ArrayList<InboxMessage>();
+        String selectQuery = "select * from " + TABLE_INBOX_MESSAGES + " WHERE " + KEY_MESSAGE_ID + "='" + id + "'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        if (cursor.moveToFirst()) {
+            InboxMessage model = new InboxMessage();
+            model.id = cursor.getString(0);
+            model.username = cursor.getString(1);
+            model.title = cursor.getString(2);
+            model.content = cursor.getString(3);
+            model.openTime = cursor.getLong(4);
+            model.sentTime = cursor.getLong(5);
+            model.isOpened = cursor.getInt(6) == 1;
+            return model;
+        }
+        return null;
+    }
+
+    public int hasUnreadMessages(String username) {
+        ArrayList<InboxMessage> list = new ArrayList<InboxMessage>();
+        String selectQuery = "select * from " + TABLE_INBOX_MESSAGES + " WHERE " + KEY_USERNAME + "='" + username + "'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        int result = 0;
+        if (cursor.moveToFirst()) {
+            do {
+                if (cursor.getInt(6) != 1)
+                    result++;
+            } while (cursor.moveToNext());
+        }
+        return result;
+    }
+
+    public boolean checkAndRemoveMessagesExpiredBySentTime(String username, double hoursToExpired) {
+        String selectQuery = "select * from " + TABLE_INBOX_MESSAGES + " WHERE " + KEY_USERNAME + "='" + username + "'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        List<String> toRemove = new ArrayList<>();
+        if (cursor.moveToFirst()) {
+            do {
+                long now = System.currentTimeMillis();
+                long sent = cursor.getLong(4);
+                if ((now - sent) > hoursToExpired * 3600000l) {
+                    toRemove.add(cursor.getString(0));
+                }
+            } while (cursor.moveToNext());
+        }
+        if (!toRemove.isEmpty()) {
+            for (String id : toRemove) {
+                removeMessage(id);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    public boolean checkAndRemoveMessagesExpiredByOpenTime(String username, int hoursToExpired) {
+        String selectQuery = "select * from " + TABLE_INBOX_MESSAGES + " WHERE " + KEY_USERNAME + "='" + username + "'";
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
+        List<String> toRemove = new ArrayList<>();
+        if (cursor.moveToFirst()) {
+            do {
+                long now = System.currentTimeMillis();
+                long sent = cursor.getLong(5);
+                if ((now - sent) > hoursToExpired * 3600000l) {
+                    toRemove.add(cursor.getString(0));
+                }
+            } while (cursor.moveToNext());
+        }
+        if (!toRemove.isEmpty()) {
+            for (String id : toRemove) {
+                removeMessage(id);
+            }
+            return true;
+        }
+        return false;
+    }
+
 
     public void addAdminForm(DBAdminFormModel form) {
 
@@ -282,6 +449,7 @@ public class DatabaseHandler extends SQLiteOpenHelper {
             Log.e("Fav Existance", "Already Exist");
         }
     }
+
 
     public void addTabs(TabsModel model, String taskID) {
 

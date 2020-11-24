@@ -8,6 +8,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
@@ -29,6 +30,7 @@ import com.aap.medicore.NetworkCalls.RetrofitClass;
 import com.aap.medicore.R;
 import com.aap.medicore.Utils.Constants;
 import com.aap.medicore.Utils.CustomButton;
+import com.aap.medicore.Utils.DateUtils;
 import com.aap.medicore.Utils.TinyDB;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -40,6 +42,8 @@ import com.google.firebase.iid.InstanceIdResult;
 import org.jsoup.Jsoup;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -157,6 +161,24 @@ public class Splash extends AppCompatActivity {
                 t.printStackTrace();
             }
         });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        onNewIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (intent != null &&
+                intent.getAction() != null &&
+                intent.getAction().equals(Constants.OPEN_INBOX_MESSAGE_ACTION) &&
+                intent.getExtras() != null) {
+            tinyDB.putBoolean(Constants.OPEN_INBOX_MESSAGE_ACTION, true);
+            tinyDB.putString(Constants.INBOX_MESSAGE_ID, intent.getExtras().getString(Constants.INBOX_MESSAGE_ID));
+        }
     }
 
     private void showToast() {
@@ -425,7 +447,7 @@ public class Splash extends AppCompatActivity {
                                     }
                                 }
                                 if (!flag)
-                                    Toast.makeText(Splash.this,"Please contact admin to add latest version to the admin panel",Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(Splash.this, "Please contact admin to add latest version to the admin panel", Toast.LENGTH_SHORT).show();
 
                             } else {
                                 findViewById(R.id.progress).setVisibility(View.GONE);

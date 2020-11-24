@@ -19,4 +19,8 @@
         android:id="@+id/Staticpages"
         android:icon="@drawable/books"
         android:title="@string/Static" />
+    <item
+        android:id="@+id/inbox_fragment"
+        android:icon="@drawable/ic_email"
+        android:title="@string/inbox" />
 </menu>

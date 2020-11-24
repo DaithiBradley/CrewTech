@@ -1,5 +1,7 @@
 package com.aap.medicore.Models;
 
+import com.aap.medicore.Utils.DateUtils;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -46,9 +48,11 @@ public class AssignedIncidencesModel {
     public void setDate(String date) {
         this.date = date;
         try {
-            objDate = new SimpleDateFormat("yyyy-MM-dd").parse(date);
-        }
-        catch (ParseException e) {
+           // objDate = new SimpleDateFormat("dd/MM/yyyy").parse(date);
+            objDate = DateUtils.tryParseDateWithPatternList(date, new String[]{
+                    DateUtils.slashDateWithYearAtEndEU,
+                    DateUtils.hyphenDateWithYearAtStartUS});
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
